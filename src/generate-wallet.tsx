@@ -2,205 +2,122 @@ import {
   Action,
   ActionPanel,
   Detail,
-  Form,
   getPreferenceValues,
   Icon,
-  open,
-  openExtensionPreferences,
-  showToast,
-  Toast,
-  useNavigation,
+  Keyboard,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
 
-import {
-  getCliPath,
-  isSignedIn,
-  listVaults,
-  saveWallet,
-  signIn,
-} from "./one-password";
-import type { SavedItem, Vault, WalletResult } from "./types";
+import type { WalletResult } from "./types";
 import { buildWalletResult, generateMnemonic } from "./wallet";
-
-interface FormValues {
-  title: string;
-  vaultId: string;
-  confirm: boolean;
-}
 
 interface Preferences {
   wordCount?: "12" | "24";
 }
 
-function ResultView({
-  result,
-  saved,
-}: {
-  result: WalletResult;
-  saved: SavedItem;
-}) {
-  const markdown = `# Saved to 1Password
+function buildMarkdown(result: WalletResult): string {
+  const words = result.mnemonic.split(" ");
+  const wordRows = Array.from(
+    { length: Math.ceil(words.length / 4) },
+    (_, row) =>
+      words
+        .slice(row * 4, row * 4 + 4)
+        .map((word, column) => {
+          const index = row * 4 + column + 1;
+          return `${String(index).padStart(2, "0")}. ${word}`.padEnd(13);
+        })
+        .join(""),
+  ).join("\n");
 
-The recovery phrase is concealed in **${saved.title}** in the **${saved.vault}** vault.
+  return `# Wallet Ready
+
+**${words.length}-word BIP39 recovery phrase**
+
+\`\`\`text
+${wordRows}
+\`\`\`
+
+---
 
 ## Public addresses
 
-| Chain | Address | Derivation path |
-| --- | --- | --- |
-| EVM | \`${result.chains.evm.address}\` | \`${result.chains.evm.path}\` |
-| BTC | \`${result.chains.btc.address}\` | \`${result.chains.btc.path}\` |
-| SOL | \`${result.chains.sol.address}\` | \`${result.chains.sol.path}\` |
+### ◆ Ethereum
 
-The recovery phrase is intentionally not displayed or copied to the clipboard.`;
+\`${result.chains.evm.address}\`
+
+Derivation path · \`${result.chains.evm.path}\`
+
+---
+
+### ₿ Bitcoin
+
+\`${result.chains.btc.address}\`
+
+Native SegWit · \`${result.chains.btc.path}\`
+
+---
+
+### ◎ Solana
+
+\`${result.chains.sol.address}\`
+
+Derivation path · \`${result.chains.sol.path}\``;
+}
+
+export default function Command() {
+  const wordCount = getPreferenceValues<Preferences>().wordCount ?? "12";
+  const [result, setResult] = useState<WalletResult>();
+
+  function generateWallet() {
+    setResult(
+      buildWalletResult(generateMnemonic(Number(wordCount) as 12 | 24)),
+    );
+  }
+
+  useEffect(() => {
+    generateWallet();
+  }, [wordCount]);
 
   return (
     <Detail
       actions={
-        <ActionPanel>
-          <Action.Open
-            title="Open in 1Password"
-            target={`onepassword://view-item/?i=${saved.id}`}
-          />
-        </ActionPanel>
-      }
-      markdown={markdown}
-    />
-  );
-}
-
-export default function Command() {
-  const { push } = useNavigation();
-  const wordCount = getPreferenceValues<Preferences>().wordCount ?? "12";
-  const [vaults, setVaults] = useState<Vault[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [setupError, setSetupError] = useState<string>();
-
-  async function loadVaults() {
-    setIsLoading(true);
-    setSetupError(undefined);
-    try {
-      getCliPath();
-      if (!(await isSignedIn())) {
-        await signIn();
-      }
-      setVaults(await listVaults());
-    } catch (error) {
-      setSetupError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadVaults();
-  }, []);
-
-  async function submit(values: FormValues) {
-    if (!values.confirm) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Confirm that you understand the recovery risk",
-      });
-      return;
-    }
-
-    const toast = await showToast({
-      style: Toast.Style.Animated,
-      title: "Checking 1Password…",
-    });
-    try {
-      if (!(await isSignedIn()))
-        throw new Error(
-          "1Password authorization expired. Reload and authenticate again.",
-        );
-      toast.title = "Generating wallet locally…";
-      const result = buildWalletResult(
-        generateMnemonic(Number(wordCount) as 12 | 24),
-      );
-      toast.title = "Saving recovery phrase to 1Password…";
-      const saved = await saveWallet(
-        result,
-        values.title.trim(),
-        values.vaultId,
-      );
-      toast.style = Toast.Style.Success;
-      toast.title = "Wallet saved to 1Password";
-      push(<ResultView result={result} saved={saved} />);
-    } catch (error) {
-      toast.style = Toast.Style.Failure;
-      toast.title = "Wallet was not saved";
-      toast.message = error instanceof Error ? error.message : String(error);
-    }
-  }
-
-  if (setupError) {
-    const cliMissing =
-      setupError.includes("CLI") || setupError.includes("not found");
-    return (
-      <Detail
-        actions={
+        result ? (
           <ActionPanel>
-            <Action icon={Icon.Repeat} onAction={loadVaults} title="Retry" />
-            {cliMissing ? (
-              <Action
-                icon={Icon.Gear}
-                onAction={openExtensionPreferences}
-                title="Open Extension Preferences"
+            <ActionPanel.Section title="Wallet">
+              <Action.CopyToClipboard
+                content={result.mnemonic}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+                title="Copy Recovery Phrase"
               />
-            ) : (
               <Action
-                icon={Icon.Gear}
-                onAction={() => open("onepassword://settings")}
-                title="Open 1Password Settings"
+                icon={Icon.ArrowClockwise}
+                onAction={generateWallet}
+                shortcut={Keyboard.Shortcut.Common.Refresh}
+                title="Generate New Wallet"
               />
-            )}
+            </ActionPanel.Section>
+            <ActionPanel.Section title="Public Addresses">
+              <Action.CopyToClipboard
+                content={result.chains.evm.address}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
+                title="Copy ETH Address"
+              />
+              <Action.CopyToClipboard
+                content={result.chains.btc.address}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "b" }}
+                title="Copy BTC Address"
+              />
+              <Action.CopyToClipboard
+                content={result.chains.sol.address}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+                title="Copy SOL Address"
+              />
+            </ActionPanel.Section>
           </ActionPanel>
-        }
-        markdown={`# 1Password setup required
-
-${setupError}
-
-Install the 1Password CLI and enable **1Password → Settings → Developer → Connect with 1Password CLI**, then retry.`}
-      />
-    );
-  }
-
-  return (
-    <Form
-      actions={
-        <ActionPanel>
-          <Action.SubmitForm
-            icon={Icon.Wallet}
-            onSubmit={submit}
-            title="Generate and Save to 1Password"
-          />
-        </ActionPanel>
+        ) : undefined
       }
-      isLoading={isLoading}
-    >
-      <Form.Description text="The recovery phrase is generated locally and saved directly to 1Password. It is never displayed in Raycast." />
-      <Form.TextField
-        defaultValue="My Wallet Seed v1"
-        id="title"
-        placeholder="My Wallet Seed v1"
-        title="Item Title"
-      />
-      <Form.Dropdown id="vaultId" title="1Password Vault">
-        {vaults.map((vault) => (
-          <Form.Dropdown.Item
-            key={vault.id}
-            title={vault.name}
-            value={vault.id}
-          />
-        ))}
-      </Form.Dropdown>
-      <Form.Separator />
-      <Form.Checkbox
-        id="confirm"
-        label="I understand that anyone with this recovery phrase can control the wallet"
-        title="Security Confirmation"
-      />
-    </Form>
+      isLoading={!result}
+      markdown={result ? buildMarkdown(result) : ""}
+    />
   );
 }
