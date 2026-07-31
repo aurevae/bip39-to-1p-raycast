@@ -11,7 +11,7 @@ import {
 } from "@raycast/api";
 import { useEffect, useState } from "react";
 
-import { phraseCardDataUri } from "./phrase-card";
+import { addressCardDataUri, phraseCardDataUri } from "./phrase-card";
 import type { WalletResult } from "./types";
 import { buildWalletResult, generateMnemonic } from "./wallet";
 
@@ -20,26 +20,21 @@ interface Preferences {
 }
 
 function buildMarkdown(result: WalletResult, revealed: boolean): string {
-  const card = phraseCardDataUri(
+  const phrase = phraseCardDataUri(
     result.mnemonic.split(" "),
     revealed,
     environment.appearance,
   );
+  const addresses = addressCardDataUri(result.chains, environment.appearance);
   const hint = revealed
-    ? "_Never share these words. Press **⌘S** to hide them again._"
-    : "_The recovery phrase is hidden. Press **⌘S** to reveal it._";
+    ? "_Anyone with these words controls the wallet. Press **⌘S** to hide._"
+    : "_Hidden for safety. Press **⌘S** to reveal._";
 
-  return `# Recovery Phrase
-
-![Recovery phrase](${card})
+  return `![Recovery phrase](${phrase})
 
 ${hint}
 
-### BTC \`${result.chains.btc.address}\`
-
-### ETH \`${result.chains.evm.address}\`
-
-### SOL \`${result.chains.sol.address}\``;
+![Public addresses](${addresses})`;
 }
 
 export default function Command() {

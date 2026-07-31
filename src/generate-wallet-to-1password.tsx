@@ -2,35 +2,49 @@ import {
   Action,
   ActionPanel,
   Detail,
+  environment,
   Form,
   getPreferenceValues,
   Icon,
+  LocalStorage,
   open,
   openExtensionPreferences,
   showToast,
   Toast,
   useNavigation,
 } from "@raycast/api";
-import { useEffect, useState } from "react";
+import { useCachedPromise } from "@raycast/utils";
+import { useEffect, useRef, useState } from "react";
 
 import {
+  AuthenticationRequiredError,
   getCliPath,
   isSignedIn,
   listVaults,
   saveWallet,
   signIn,
 } from "./one-password";
-import type { SavedItem, Vault, WalletResult } from "./types";
+import { addressCardDataUri } from "./phrase-card";
+import type { SavedItem, WalletResult } from "./types";
 import { buildWalletResult, generateMnemonic } from "./wallet";
+
+const ACKNOWLEDGED_KEY = "security-risk-acknowledged";
 
 interface FormValues {
   title: string;
   vaultId: string;
-  confirm: boolean;
+  confirm?: boolean;
 }
 
 interface Preferences {
   wordCount?: "12" | "24";
+}
+
+function defaultItemTitle(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `Wallet Seed ${now.getFullYear()}-${month}-${day}`;
 }
 
 function ResultView({
@@ -40,19 +54,14 @@ function ResultView({
   result: WalletResult;
   saved: SavedItem;
 }) {
+  const addresses = addressCardDataUri(result.chains, environment.appearance);
   const markdown = `# Saved to 1Password
 
-The recovery phrase is concealed in **${saved.title}** in the **${saved.vault}** vault.
+**${saved.title}** · **${saved.vault}** vault
 
-## Public addresses
+The recovery phrase is stored in a concealed field and is not shown here.
 
-| Chain | Address | Derivation path |
-| --- | --- | --- |
-| EVM | \`${result.chains.evm.address}\` | \`${result.chains.evm.path}\` |
-| BTC | \`${result.chains.btc.address}\` | \`${result.chains.btc.path}\` |
-| SOL | \`${result.chains.sol.address}\` | \`${result.chains.sol.path}\` |
-
-The recovery phrase is intentionally not displayed or copied to the clipboard.`;
+![Public addresses](${addresses})`;
 
   return (
     <Detail
@@ -62,6 +71,23 @@ The recovery phrase is intentionally not displayed or copied to the clipboard.`;
             title="Open in 1Password"
             target={`onepassword://view-item/?i=${saved.id}`}
           />
+          <ActionPanel.Section title="Public Addresses">
+            <Action.CopyToClipboard
+              content={result.chains.btc.address}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "b" }}
+              title="Copy BTC Address"
+            />
+            <Action.CopyToClipboard
+              content={result.chains.evm.address}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
+              title="Copy ETH Address"
+            />
+            <Action.CopyToClipboard
+              content={result.chains.sol.address}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+              title="Copy SOL Address"
+            />
+          </ActionPanel.Section>
         </ActionPanel>
       }
       markdown={markdown}
@@ -72,58 +98,82 @@ The recovery phrase is intentionally not displayed or copied to the clipboard.`;
 export default function Command() {
   const { push } = useNavigation();
   const wordCount = getPreferenceValues<Preferences>().wordCount ?? "12";
-  const [vaults, setVaults] = useState<Vault[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [setupError, setSetupError] = useState<string>();
+  const [acknowledged, setAcknowledged] = useState<boolean>();
+  const isSubmitting = useRef(false);
 
-  async function loadVaults() {
-    setIsLoading(true);
-    setSetupError(undefined);
-    try {
+  useEffect(() => {
+    void LocalStorage.getItem<boolean>(ACKNOWLEDGED_KEY)
+      .then((value) => setAcknowledged(value === true))
+      .catch(() => setAcknowledged(false));
+  }, []);
+
+  const {
+    data: vaults,
+    error: setupError,
+    isLoading: isLoadingVaults,
+    revalidate,
+  } = useCachedPromise(
+    async () => {
       getCliPath();
       if (!(await isSignedIn())) {
         await signIn();
       }
-      setVaults(await listVaults());
-    } catch (error) {
-      setSetupError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadVaults();
-  }, []);
+      return listVaults();
+    },
+    [],
+    // The setup-error screen below is the single error surface; suppress the
+    // hook's own generic failure toast.
+    { keepPreviousData: true, onError: () => {} },
+  );
 
   async function submit(values: FormValues) {
-    if (!values.confirm) {
+    if (isSubmitting.current) return;
+    if (acknowledged !== true && !values.confirm) {
       await showToast({
         style: Toast.Style.Failure,
         title: "Confirm that you understand the recovery risk",
       });
       return;
     }
+    if (!values.vaultId) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Select a 1Password vault first",
+        message: "Wait for the vault list to finish loading.",
+      });
+      return;
+    }
 
+    isSubmitting.current = true;
+    const title = values.title.trim() || defaultItemTitle();
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: "Checking 1Password…",
+      title: "Generating wallet locally…",
     });
     try {
-      if (!(await isSignedIn()))
-        throw new Error(
-          "1Password authorization expired. Reload and authenticate again.",
-        );
-      toast.title = "Generating wallet locally…";
       const result = buildWalletResult(
         generateMnemonic(Number(wordCount) as 12 | 24),
       );
       toast.title = "Saving recovery phrase to 1Password…";
-      const saved = await saveWallet(
-        result,
-        values.title.trim(),
-        values.vaultId,
-      );
+      let saved: SavedItem;
+      try {
+        saved = await saveWallet(result, title, values.vaultId);
+      } catch (error) {
+        if (
+          !(error instanceof AuthenticationRequiredError) ||
+          /prompt dismissed/i.test(error.message)
+        ) {
+          throw error;
+        }
+        toast.title = "Waiting for 1Password authorization…";
+        await signIn();
+        toast.title = "Saving recovery phrase to 1Password…";
+        saved = await saveWallet(result, title, values.vaultId);
+      }
+      if (acknowledged === false) {
+        await LocalStorage.setItem(ACKNOWLEDGED_KEY, true);
+        setAcknowledged(true);
+      }
       toast.style = Toast.Style.Success;
       toast.title = "Wallet saved to 1Password";
       push(<ResultView result={result} saved={saved} />);
@@ -131,17 +181,20 @@ export default function Command() {
       toast.style = Toast.Style.Failure;
       toast.title = "Wallet was not saved";
       toast.message = error instanceof Error ? error.message : String(error);
+    } finally {
+      isSubmitting.current = false;
     }
   }
 
   if (setupError) {
-    const cliMissing =
-      setupError.includes("CLI") || setupError.includes("not found");
+    const message = setupError.message;
+    const cliMissing = message.includes("CLI") || message.includes("not found");
     return (
       <Detail
+        isLoading={isLoadingVaults}
         actions={
           <ActionPanel>
-            <Action icon={Icon.Repeat} onAction={loadVaults} title="Retry" />
+            <Action icon={Icon.Repeat} onAction={revalidate} title="Retry" />
             {cliMissing ? (
               <Action
                 icon={Icon.Gear}
@@ -159,7 +212,7 @@ export default function Command() {
         }
         markdown={`# 1Password setup required
 
-${setupError}
+${message}
 
 Install the 1Password CLI and enable **1Password → Settings → Developer → Connect with 1Password CLI**, then retry.`}
       />
@@ -177,17 +230,17 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           />
         </ActionPanel>
       }
-      isLoading={isLoading}
+      isLoading={isLoadingVaults || acknowledged === undefined}
     >
       <Form.Description text="The recovery phrase is generated locally and saved directly to 1Password. It is never displayed in Raycast." />
       <Form.TextField
-        defaultValue="My Wallet Seed v1"
+        defaultValue={defaultItemTitle()}
         id="title"
-        placeholder="My Wallet Seed v1"
+        placeholder={defaultItemTitle()}
         title="Item Title"
       />
-      <Form.Dropdown id="vaultId" title="1Password Vault">
-        {vaults.map((vault) => (
+      <Form.Dropdown id="vaultId" storeValue title="1Password Vault">
+        {(vaults ?? []).map((vault) => (
           <Form.Dropdown.Item
             key={vault.id}
             title={vault.name}
@@ -195,12 +248,16 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           />
         ))}
       </Form.Dropdown>
-      <Form.Separator />
-      <Form.Checkbox
-        id="confirm"
-        label="I understand that anyone with this recovery phrase can control the wallet"
-        title="Security Confirmation"
-      />
+      {acknowledged === false && (
+        <>
+          <Form.Separator />
+          <Form.Checkbox
+            id="confirm"
+            label="I understand that anyone with this recovery phrase can control the wallet"
+            title="Security Confirmation"
+          />
+        </>
+      )}
     </Form>
   );
 }
