@@ -62,18 +62,17 @@ wallet directly to 1Password. The command:
    wallet, and copy public addresses.
 3. After **Save to 1Password** is selected, checks that the 1Password CLI is
    installed and authenticated and loads the available vaults.
-4. Collects the item title, target vault, and first-use security confirmation.
+4. Collects the item title and target vault.
 5. Creates a 1Password Crypto Wallet item for the wallet shown in the preview,
    containing the concealed recovery
    phrase, public addresses, derivation paths, and safety notes.
 
 The command form contains:
 
-| Field                     | Description                                                              |
-| ------------------------- | ------------------------------------------------------------------------ |
-| **Item Title**            | Name of the new item in 1Password. Defaults to `Wallet Seed <date>`.     |
-| **1Password Vault**       | Selects the target vault. The last selected vault is remembered.         |
-| **Security Confirmation** | Shown only on first use; acknowledged once, it is not asked again.       |
+| Field               | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| **Item Title**      | Name of the new item in 1Password. Defaults to `Wallet Seed <date>`. |
+| **1Password Vault** | Selects the target vault. The last selected vault is remembered.     |
 
 The vault list is cached, so after the first run the form opens instantly
 while the list refreshes in the background. If the 1Password authorization has

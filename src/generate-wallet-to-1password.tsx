@@ -5,7 +5,6 @@ import {
   environment,
   Form,
   Icon,
-  LocalStorage,
   open,
   openExtensionPreferences,
   showToast,
@@ -13,7 +12,7 @@ import {
   useNavigation,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import { GeneratedWalletDetail } from "./generated-wallet-detail";
 import {
@@ -27,12 +26,9 @@ import {
 import { addressCardDataUri } from "./phrase-card";
 import type { SavedItem, WalletResult } from "./types";
 
-const ACKNOWLEDGED_KEY = "security-risk-acknowledged";
-
 interface FormValues {
   title: string;
   vaultId: string;
-  confirm?: boolean;
 }
 
 function defaultItemTitle(): string {
@@ -92,14 +88,7 @@ The recovery phrase is stored in a concealed field and is not shown here.
 
 function SaveWalletForm({ result }: { result: WalletResult }) {
   const { push } = useNavigation();
-  const [acknowledged, setAcknowledged] = useState<boolean>();
   const isSubmitting = useRef(false);
-
-  useEffect(() => {
-    void LocalStorage.getItem<boolean>(ACKNOWLEDGED_KEY)
-      .then((value) => setAcknowledged(value === true))
-      .catch(() => setAcknowledged(false));
-  }, []);
 
   const {
     data: vaults,
@@ -122,13 +111,6 @@ function SaveWalletForm({ result }: { result: WalletResult }) {
 
   async function submit(values: FormValues) {
     if (isSubmitting.current) return;
-    if (acknowledged !== true && !values.confirm) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Confirm that you understand the recovery risk",
-      });
-      return;
-    }
     if (!values.vaultId) {
       await showToast({
         style: Toast.Style.Failure,
@@ -159,10 +141,6 @@ function SaveWalletForm({ result }: { result: WalletResult }) {
         await signIn();
         toast.title = "Saving recovery phrase to 1Password…";
         saved = await saveWallet(result, title, values.vaultId);
-      }
-      if (acknowledged === false) {
-        await LocalStorage.setItem(ACKNOWLEDGED_KEY, true);
-        setAcknowledged(true);
       }
       toast.style = Toast.Style.Success;
       toast.title = "Wallet saved to 1Password";
@@ -220,7 +198,7 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           />
         </ActionPanel>
       }
-      isLoading={isLoadingVaults || acknowledged === undefined}
+      isLoading={isLoadingVaults}
     >
       <Form.Description text="The recovery phrase shown on the previous screen will be saved directly to 1Password." />
       <Form.TextField
@@ -238,16 +216,6 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           />
         ))}
       </Form.Dropdown>
-      {acknowledged === false && (
-        <>
-          <Form.Separator />
-          <Form.Checkbox
-            id="confirm"
-            label="I understand that anyone with this recovery phrase can control the wallet"
-            title="Security Confirmation"
-          />
-        </>
-      )}
     </Form>
   );
 }
