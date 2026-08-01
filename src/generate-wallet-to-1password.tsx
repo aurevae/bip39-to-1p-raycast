@@ -35,7 +35,9 @@ function defaultItemTitle(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
-  return `Wallet Seed ${now.getFullYear()}-${month}-${day}`;
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  return `Wallet Seed ${now.getFullYear()}-${month}-${day} ${hour}:${minute}`;
 }
 
 function ResultView({

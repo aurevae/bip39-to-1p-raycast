@@ -71,7 +71,7 @@ The command form contains:
 
 | Field               | Description                                                          |
 | ------------------- | -------------------------------------------------------------------- |
-| **Item Title**      | Name of the new item in 1Password. Defaults to `Wallet Seed <date>`. |
+| **Item Title**      | Name of the new item in 1Password. Defaults to `Wallet Seed <date> <time>`. |
 | **1Password Vault** | Selects the target vault. The last selected vault is remembered.     |
 
 The vault list is cached, so after the first run the form opens instantly
