@@ -64,8 +64,8 @@ wallet directly to 1Password. The command:
    installed and authenticated and loads the available vaults.
 4. Collects the item title and target vault.
 5. Creates a 1Password Crypto Wallet item for the wallet shown in the preview,
-   containing the concealed recovery
-   phrase, public addresses, derivation paths, and safety notes.
+   containing the concealed recovery phrase, public addresses, and structured
+   derivation details.
 
 The command form contains:
 

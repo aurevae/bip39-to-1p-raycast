@@ -18,4 +18,29 @@ describe("1Password template", () => {
       value: FIXED_MNEMONIC,
     });
   });
+
+  it("organizes wallet details into dedicated sections", () => {
+    const result = buildWalletResult(FIXED_MNEMONIC);
+    const template = buildItemTemplate(result, "My Wallet Seed v1");
+
+    expect(template.sections.map((section) => section.label)).toEqual([
+      "Recovery",
+      "Public Addresses",
+      "Derivation Details",
+    ]);
+    expect(template.fields.find((field) => field.id === "evmAddress"))
+      .toMatchObject({
+        label: "EVM Address",
+        value: result.chains.evm.address,
+      });
+  });
+
+  it("does not include notes or an empty password field", () => {
+    const result = buildWalletResult(FIXED_MNEMONIC);
+    const template = buildItemTemplate(result, "My Wallet Seed v1");
+    const fieldIds = template.fields.map((field) => field.id);
+
+    expect(fieldIds).not.toContain("notesPlain");
+    expect(fieldIds).not.toContain("password");
+  });
 });
