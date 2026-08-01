@@ -68,9 +68,5 @@ export function buildWalletResult(mnemonic: string): WalletResult {
       },
       sol: { path: SOL_PATH, address: solAddress },
     },
-    notes: [
-      "Store this item in 1Password. Do NOT share.",
-      "If you add a BIP39 passphrase (25th word), store it separately.",
-    ],
   };
 }

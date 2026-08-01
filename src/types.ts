@@ -5,7 +5,6 @@ export interface WalletResult {
     btc: { type: string; path: string; address: string };
     sol: { path: string; address: string };
   };
-  notes: string[];
 }
 
 export interface SavedItem {

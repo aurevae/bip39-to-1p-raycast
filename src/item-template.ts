@@ -1,65 +1,71 @@
 import type { WalletResult } from "./types";
 
-export function buildNoteContent(result: WalletResult, title: string): string {
-  return [
-    title,
-    "",
-    "Chains:",
-    `- EVM address: ${result.chains.evm.address}`,
-    `  path: ${result.chains.evm.path}`,
-    `- BTC address: ${result.chains.btc.address}`,
-    `  type: ${result.chains.btc.type}`,
-    `  path: ${result.chains.btc.path}`,
-    `- SOL address: ${result.chains.sol.address}`,
-    `  path: ${result.chains.sol.path}`,
-    "",
-    "Notes:",
-    ...result.notes,
-  ].join("\n");
-}
-
 export function buildItemTemplate(result: WalletResult, title: string) {
-  const walletSection = { id: "wallet", label: "Wallet" };
+  const recoverySection = { id: "recovery", label: "Recovery" };
+  const addressesSection = { id: "addresses", label: "Public Addresses" };
+  const derivationSection = { id: "derivation", label: "Derivation Details" };
+
   return {
     title,
     category: "CUSTOM",
     category_id: "115",
-    sections: [walletSection],
+    sections: [recoverySection, addressesSection, derivationSection],
     fields: [
       {
-        id: "notesPlain",
-        type: "STRING",
-        purpose: "NOTES",
-        label: "notesPlain",
-        value: buildNoteContent(result, title),
-      },
-      {
         id: "recoveryPhrase",
+        section: recoverySection,
         type: "CONCEALED",
-        label: "recovery phrase",
+        label: "Recovery Phrase",
         value: result.mnemonic,
       },
-      { id: "password", type: "CONCEALED", label: "password", value: "" },
       {
-        id: "walletAddress",
-        section: walletSection,
+        id: "evmAddress",
+        section: addressesSection,
         type: "STRING",
-        label: "wallet address",
+        label: "EVM Address",
         value: result.chains.evm.address,
       },
       {
         id: "btcAddress",
-        section: walletSection,
+        section: addressesSection,
         type: "STRING",
-        label: "BTC address",
+        label: "Bitcoin Address",
         value: result.chains.btc.address,
       },
       {
         id: "solAddress",
-        section: walletSection,
+        section: addressesSection,
         type: "STRING",
-        label: "SOL address",
+        label: "Solana Address",
         value: result.chains.sol.address,
+      },
+      {
+        id: "evmPath",
+        section: derivationSection,
+        type: "STRING",
+        label: "EVM Path",
+        value: result.chains.evm.path,
+      },
+      {
+        id: "btcPath",
+        section: derivationSection,
+        type: "STRING",
+        label: "Bitcoin Path",
+        value: result.chains.btc.path,
+      },
+      {
+        id: "btcType",
+        section: derivationSection,
+        type: "STRING",
+        label: "Bitcoin Type",
+        value: result.chains.btc.type,
+      },
+      {
+        id: "solPath",
+        section: derivationSection,
+        type: "STRING",
+        label: "Solana Path",
+        value: result.chains.sol.path,
       },
     ],
   };

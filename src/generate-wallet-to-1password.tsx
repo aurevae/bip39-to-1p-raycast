@@ -4,9 +4,7 @@ import {
   Detail,
   environment,
   Form,
-  getPreferenceValues,
   Icon,
-  LocalStorage,
   open,
   openExtensionPreferences,
   showToast,
@@ -14,8 +12,9 @@ import {
   useNavigation,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
+import { GeneratedWalletDetail } from "./generated-wallet-detail";
 import {
   AuthenticationRequiredError,
   getCliPath,
@@ -26,25 +25,19 @@ import {
 } from "./one-password";
 import { addressCardDataUri } from "./phrase-card";
 import type { SavedItem, WalletResult } from "./types";
-import { buildWalletResult, generateMnemonic } from "./wallet";
-
-const ACKNOWLEDGED_KEY = "security-risk-acknowledged";
 
 interface FormValues {
   title: string;
   vaultId: string;
-  confirm?: boolean;
-}
-
-interface Preferences {
-  wordCount?: "12" | "24";
 }
 
 function defaultItemTitle(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
-  return `Wallet Seed ${now.getFullYear()}-${month}-${day}`;
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  return `Wallet Seed ${now.getFullYear()}-${month}-${day} ${hour}:${minute}`;
 }
 
 function ResultView({
@@ -95,17 +88,9 @@ The recovery phrase is stored in a concealed field and is not shown here.
   );
 }
 
-export default function Command() {
+function SaveWalletForm({ result }: { result: WalletResult }) {
   const { push } = useNavigation();
-  const wordCount = getPreferenceValues<Preferences>().wordCount ?? "12";
-  const [acknowledged, setAcknowledged] = useState<boolean>();
   const isSubmitting = useRef(false);
-
-  useEffect(() => {
-    void LocalStorage.getItem<boolean>(ACKNOWLEDGED_KEY)
-      .then((value) => setAcknowledged(value === true))
-      .catch(() => setAcknowledged(false));
-  }, []);
 
   const {
     data: vaults,
@@ -128,13 +113,6 @@ export default function Command() {
 
   async function submit(values: FormValues) {
     if (isSubmitting.current) return;
-    if (acknowledged !== true && !values.confirm) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Confirm that you understand the recovery risk",
-      });
-      return;
-    }
     if (!values.vaultId) {
       await showToast({
         style: Toast.Style.Failure,
@@ -148,13 +126,9 @@ export default function Command() {
     const title = values.title.trim() || defaultItemTitle();
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: "Generating wallet locally…",
+      title: "Saving recovery phrase to 1Password…",
     });
     try {
-      const result = buildWalletResult(
-        generateMnemonic(Number(wordCount) as 12 | 24),
-      );
-      toast.title = "Saving recovery phrase to 1Password…";
       let saved: SavedItem;
       try {
         saved = await saveWallet(result, title, values.vaultId);
@@ -169,10 +143,6 @@ export default function Command() {
         await signIn();
         toast.title = "Saving recovery phrase to 1Password…";
         saved = await saveWallet(result, title, values.vaultId);
-      }
-      if (acknowledged === false) {
-        await LocalStorage.setItem(ACKNOWLEDGED_KEY, true);
-        setAcknowledged(true);
       }
       toast.style = Toast.Style.Success;
       toast.title = "Wallet saved to 1Password";
@@ -226,13 +196,13 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           <Action.SubmitForm
             icon={Icon.Wallet}
             onSubmit={submit}
-            title="Generate and Save to 1Password"
+            title="Save to 1Password"
           />
         </ActionPanel>
       }
-      isLoading={isLoadingVaults || acknowledged === undefined}
+      isLoading={isLoadingVaults}
     >
-      <Form.Description text="The recovery phrase is generated locally and saved directly to 1Password. It is never displayed in Raycast." />
+      <Form.Description text="The recovery phrase shown on the previous screen will be saved directly to 1Password." />
       <Form.TextField
         defaultValue={defaultItemTitle()}
         id="title"
@@ -248,16 +218,22 @@ Install the 1Password CLI and enable **1Password → Settings → Developer → 
           />
         ))}
       </Form.Dropdown>
-      {acknowledged === false && (
-        <>
-          <Form.Separator />
-          <Form.Checkbox
-            id="confirm"
-            label="I understand that anyone with this recovery phrase can control the wallet"
-            title="Security Confirmation"
-          />
-        </>
-      )}
     </Form>
+  );
+}
+
+export default function Command() {
+  const { push } = useNavigation();
+
+  return (
+    <GeneratedWalletDetail
+      onRecoveryPhraseAction={(result) => (
+        <Action
+          icon={Icon.Lock}
+          onAction={() => push(<SaveWalletForm result={result} />)}
+          title="Save to 1Password"
+        />
+      )}
+    />
   );
 }

@@ -2,12 +2,12 @@
 
 Generate a 12- or 24-word BIP39 recovery phrase locally and derive EVM, Bitcoin
 Native SegWit, and Solana addresses. Review the wallet on screen, or save it
-directly to a 1Password Crypto Wallet item without the phrase ever being
-displayed.
+directly to a 1Password Crypto Wallet item.
 
-In the 1Password flow the recovery phrase is never shown in Raycast, copied to
-the clipboard, written to disk, or included in process arguments. It is sent to
-`op item create` through stdin and stored in a concealed 1Password field.
+In the 1Password flow the recovery phrase starts masked and is never copied to
+the clipboard automatically, written to disk, or included in process arguments.
+It is sent to `op item create` through stdin and stored in a concealed
+1Password field.
 
 ## Requirements
 
@@ -47,41 +47,52 @@ Shortcuts:
 Because this command displays the recovery phrase on screen and allows copying
 it to the clipboard, use it only in a private environment and store the phrase
 securely yourself. For wallets you plan to keep, prefer **Generate Wallet to
-1Password**, which never displays the phrase.
+1Password**, which saves the phrase without requiring a clipboard copy.
 
 ### Generate Wallet to 1Password
 
 Raycast command: **BIP39 Wallet Generator for 1Password → Generate Wallet to 1Password**
 
-Generates a new wallet locally and saves it directly to 1Password. The command:
+Generates a new wallet locally, lets you review it, and then saves the same
+wallet directly to 1Password. The command:
 
-1. Checks that the 1Password CLI is installed and authenticated.
-2. Loads the available 1Password vaults.
-3. Generates a new 12- or 24-word BIP39 recovery phrase.
-4. Derives the first EVM, Bitcoin Native SegWit, and Solana addresses.
-5. Creates a 1Password Crypto Wallet item containing the concealed recovery
-   phrase, public addresses, derivation paths, and safety notes.
+1. Generates a new 12- or 24-word BIP39 recovery phrase.
+2. Shows the same masked recovery phrase and public-address preview as
+   **Generate Wallet**. You can reveal or hide the phrase, regenerate the
+   wallet, and copy public addresses.
+3. After **Save to 1Password** is selected, checks that the 1Password CLI is
+   installed and authenticated and loads the available vaults.
+4. Collects the item title and target vault.
+5. Creates a 1Password Crypto Wallet item for the wallet shown in the preview,
+   containing the concealed recovery phrase, public addresses, and structured
+   derivation details.
 
 The command form contains:
 
-| Field                     | Description                                                         |
-| ------------------------- | ------------------------------------------------------------------- |
-| **Item Title**            | Name of the new item in 1Password. Defaults to `My Wallet Seed v1`. |
-| **1Password Vault**       | Selects the vault in which the item will be created.                |
-| **Security Confirmation** | Must be checked before a wallet can be generated.                   |
+| Field               | Description                                                          |
+| ------------------- | -------------------------------------------------------------------- |
+| **Item Title**      | Name of the new item in 1Password. Defaults to `Wallet Seed <date> <time>`. |
+| **1Password Vault** | Selects the target vault. The last selected vault is remembered.     |
+
+The vault list is cached, so after the first run the form opens instantly
+while the list refreshes in the background. If the 1Password authorization has
+expired when saving, the command re-triggers the 1Password prompt and retries
+automatically.
 
 Available actions:
 
-| View                 | Action                             | Description                                                 |
-| -------------------- | ---------------------------------- | ----------------------------------------------------------- |
-| Wallet form          | **Generate and Save to 1Password** | Generates the recovery phrase and saves the wallet item.    |
-| Saved result         | **Open in 1Password**              | Opens the newly created item in the 1Password desktop app.  |
-| Setup error          | **Retry**                          | Checks the CLI, authentication, and vault list again.       |
-| Missing CLI          | **Open Extension Preferences**     | Opens the setting for a custom absolute `op` CLI path.      |
-| Authentication error | **Open 1Password Settings**        | Opens 1Password settings so CLI integration can be enabled. |
+| View                 | Action                         | Description                                                 |
+| -------------------- | ------------------------------ | ----------------------------------------------------------- |
+| Wallet preview       | **Save to 1Password**          | Opens the 1Password item form for the displayed wallet.     |
+| Wallet form          | **Save to 1Password**          | Saves the displayed wallet to the selected vault.           |
+| Saved result         | **Open in 1Password**          | Opens the newly created item in the 1Password desktop app.  |
+| Saved result         | **Copy BTC/ETH/SOL Address**   | Copies a public address (⌘⇧B / ⌘⇧E / ⌘⇧L).                  |
+| Setup error          | **Retry**                      | Checks the CLI, authentication, and vault list again.       |
+| Missing CLI          | **Open Extension Preferences** | Opens the setting for a custom absolute `op` CLI path.      |
+| Authentication error | **Open 1Password Settings**    | Opens 1Password settings so CLI integration can be enabled. |
 
-The result view displays only the saved item name, vault, public addresses, and
-derivation paths. It never displays the recovery phrase.
+The result view displays only the saved item name, vault, and public
+addresses. It never displays the recovery phrase.
 
 ## Extension preferences
 
@@ -108,11 +119,11 @@ The extension looks for `op` at `/opt/homebrew/bin/op` and
 - **Generate Wallet** runs entirely locally and never invokes the 1Password
   CLI. It displays the recovery phrase on screen, so run it only in a trusted,
   private environment.
-- **Generate Wallet to 1Password** never displays the recovery phrase.
-  1Password readiness is checked before a phrase is generated, the phrase
-  exists only in process memory until `op` finishes, and the JSON template is
-  passed over stdin. Only public addresses and 1Password item metadata appear
-  in the result view.
+- **Generate Wallet to 1Password** uses the same preview and starts with the
+  recovery phrase masked. Revealing it is optional; saving does not copy it to
+  the clipboard. The phrase exists only in process memory until `op` finishes,
+  and the JSON template is passed over stdin. Only public addresses and
+  1Password item metadata appear in the saved result view.
 - No transaction or message signing is implemented.
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution.
