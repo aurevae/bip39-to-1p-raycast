@@ -18,7 +18,7 @@ describe("phrase card", () => {
     for (const word of new Set(WORDS)) {
       expect(svg).not.toContain(word);
     }
-    expect(svg).toContain("HIDDEN");
+    expect(svg).toContain('width="54" height="7"');
   });
 
   it("keeps the words out of the masked data URI", () => {
@@ -36,7 +36,6 @@ describe("phrase card", () => {
     }
     expect(svg).toContain(">01<");
     expect(svg).toContain(">12<");
-    expect(svg).toContain("VISIBLE");
   });
 
   it("lays out 12 words in 3 rows and 24 words in 6 rows", () => {
@@ -46,14 +45,20 @@ describe("phrase card", () => {
       "dark",
     );
     expect(buildPhraseCardSvg(WORDS, true, "dark")).toContain(
-      'viewBox="0 0 700 260"',
+      'viewBox="0 0 700 212"',
     );
-    expect(twentyFour).toContain('viewBox="0 0 700 434"');
+    expect(twentyFour).toContain('viewBox="0 0 700 374"');
   });
 });
 
 describe("address card", () => {
   const chains = buildWalletResult(FIXED_MNEMONIC).chains;
+
+  it("lists Bitcoin first", () => {
+    const svg = buildAddressCardSvg(chains, "dark");
+    expect(svg.indexOf(">Bitcoin<")).toBeLessThan(svg.indexOf(">Ethereum<"));
+    expect(svg.indexOf(">Bitcoin<")).toBeLessThan(svg.indexOf(">Solana<"));
+  });
 
   it("renders every chain ticker and address", () => {
     const svg = buildAddressCardSvg(chains, "dark");

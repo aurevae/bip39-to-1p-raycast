@@ -15,6 +15,8 @@ interface Preferences {
 export class CliMissingError extends Error {}
 export class AuthenticationRequiredError extends Error {}
 
+const AUTH_ERROR_PATTERN = /not signed in|authorization|authenticate|session/i;
+
 export function getCliPath(): string {
   const preferences = getPreferenceValues<Preferences>();
   const path = [
@@ -47,7 +49,7 @@ async function execOp(args: string[]): Promise<string> {
         : "";
     const message =
       stderr || (error instanceof Error ? error.message : String(error));
-    if (/not signed in|authorization|authenticate|session/i.test(message)) {
+    if (AUTH_ERROR_PATTERN.test(message)) {
       throw new AuthenticationRequiredError(message);
     }
     throw new Error(message);
@@ -98,11 +100,13 @@ export async function saveWallet(
     child.stderr.setEncoding("utf8").on("data", (chunk) => (stderr += chunk));
     child.on("error", reject);
     child.on("close", (status) => {
-      if (status === 0) resolve(stdout);
-      else
-        reject(
-          new Error(stderr.trim() || "Failed to create the 1Password item."),
-        );
+      if (status === 0) return resolve(stdout);
+      const message = stderr.trim() || "Failed to create the 1Password item.";
+      reject(
+        AUTH_ERROR_PATTERN.test(message)
+          ? new AuthenticationRequiredError(message)
+          : new Error(message),
+      );
     });
     child.stdin.end(input);
   });
