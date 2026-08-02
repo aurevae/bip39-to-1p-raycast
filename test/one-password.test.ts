@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CliMissingError, resolveCliPath } from "../src/cli-path";
 import { buildItemTemplate } from "../src/item-template";
 import { buildWalletResult } from "../src/wallet";
 
@@ -28,11 +29,12 @@ describe("1Password template", () => {
       "Public Addresses",
       "Derivation Details",
     ]);
-    expect(template.fields.find((field) => field.id === "evmAddress"))
-      .toMatchObject({
-        label: "EVM Address",
-        value: result.chains.evm.address,
-      });
+    expect(
+      template.fields.find((field) => field.id === "evmAddress"),
+    ).toMatchObject({
+      label: "EVM Address",
+      value: result.chains.evm.address,
+    });
   });
 
   it("does not include notes or an empty password field", () => {
@@ -42,5 +44,34 @@ describe("1Password template", () => {
 
     expect(fieldIds).not.toContain("notesPlain");
     expect(fieldIds).not.toContain("password");
+  });
+});
+
+describe("1Password CLI path", () => {
+  it("rejects a configured relative path", () => {
+    expect(() => resolveCliPath("bin/op", () => true)).toThrowError(
+      new CliMissingError(
+        "The custom 1Password CLI path must be an absolute path.",
+      ),
+    );
+  });
+
+  it("prefers an existing configured absolute path", () => {
+    const existingPaths = new Set([
+      "/Applications/1Password.app/Contents/MacOS/op",
+    ]);
+
+    expect(
+      resolveCliPath(
+        " /Applications/1Password.app/Contents/MacOS/op ",
+        (path) => existingPaths.has(path),
+      ),
+    ).toBe("/Applications/1Password.app/Contents/MacOS/op");
+  });
+
+  it("falls back to a known installation path", () => {
+    expect(
+      resolveCliPath(undefined, (path) => path === "/usr/local/bin/op"),
+    ).toBe("/usr/local/bin/op");
   });
 });

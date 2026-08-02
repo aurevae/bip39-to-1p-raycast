@@ -1,10 +1,12 @@
 import { getPreferenceValues } from "@raycast/api";
 import { execFile, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 
+import { CliMissingError, resolveCliPath } from "./cli-path";
 import { buildItemTemplate } from "./item-template";
 import type { SavedItem, Vault, WalletResult } from "./types";
+
+export { CliMissingError } from "./cli-path";
 
 const execFileAsync = promisify(execFile);
 
@@ -12,27 +14,13 @@ interface Preferences {
   cliPath?: string;
 }
 
-export class CliMissingError extends Error {}
 export class AuthenticationRequiredError extends Error {}
 
 const AUTH_ERROR_PATTERN = /not signed in|authorization|authenticate|session/i;
 
 export function getCliPath(): string {
   const preferences = getPreferenceValues<Preferences>();
-  const path = [
-    preferences.cliPath,
-    "/opt/homebrew/bin/op",
-    "/usr/local/bin/op",
-  ]
-    .filter((candidate): candidate is string => Boolean(candidate))
-    .find(existsSync);
-
-  if (!path) {
-    throw new CliMissingError(
-      "1Password CLI was not found. Install it or set its path in preferences.",
-    );
-  }
-  return path;
+  return resolveCliPath(preferences.cliPath);
 }
 
 async function execOp(args: string[]): Promise<string> {
