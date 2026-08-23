@@ -18,6 +18,7 @@ import { buildWalletResult, generateMnemonic } from "./wallet";
 
 interface GeneratedWalletDetailProps {
   onRecoveryPhraseAction: (result: WalletResult) => ReactElement;
+  revealRecoveryPhraseAsPrimary?: boolean;
 }
 
 function buildMarkdown(result: WalletResult, revealed: boolean): string {
@@ -40,6 +41,7 @@ ${hint}
 
 export function GeneratedWalletDetail({
   onRecoveryPhraseAction,
+  revealRecoveryPhraseAsPrimary = false,
 }: GeneratedWalletDetailProps) {
   const wordCount =
     getPreferenceValues<ExtensionPreferences>().wordCount ?? "12";
@@ -68,19 +70,36 @@ export function GeneratedWalletDetail({
     generateWallet();
   }, [generateWallet]);
 
+  const revealRecoveryPhraseAction = (
+    <Action
+      icon={revealed ? Icon.EyeDisabled : Icon.Eye}
+      onAction={() => setRevealed((current) => !current)}
+      shortcut={Keyboard.Shortcut.Common.Save}
+      title={revealed ? "Hide Recovery Phrase" : "Reveal Recovery Phrase"}
+    />
+  );
+
   return (
     <Detail
       actions={
         result ? (
           <ActionPanel>
             <ActionPanel.Section title="Wallet">
-              {onRecoveryPhraseAction(result)}
+              {revealRecoveryPhraseAsPrimary
+                ? revealRecoveryPhraseAction
+                : null}
+              {!revealRecoveryPhraseAsPrimary
+                ? onRecoveryPhraseAction(result)
+                : null}
               <Action
                 icon={Icon.ArrowClockwise}
                 onAction={regenerateWallet}
                 shortcut={Keyboard.Shortcut.Common.Refresh}
                 title="Generate New Wallet"
               />
+              {revealRecoveryPhraseAsPrimary
+                ? onRecoveryPhraseAction(result)
+                : null}
             </ActionPanel.Section>
             <ActionPanel.Section title="Public Addresses">
               <Action.CopyToClipboard
@@ -99,16 +118,11 @@ export function GeneratedWalletDetail({
                 title="Copy SOL Address"
               />
             </ActionPanel.Section>
-            <ActionPanel.Section>
-              <Action
-                icon={revealed ? Icon.EyeDisabled : Icon.Eye}
-                onAction={() => setRevealed((current) => !current)}
-                shortcut={Keyboard.Shortcut.Common.Save}
-                title={
-                  revealed ? "Hide Recovery Phrase" : "Reveal Recovery Phrase"
-                }
-              />
-            </ActionPanel.Section>
+            {!revealRecoveryPhraseAsPrimary ? (
+              <ActionPanel.Section>
+                {revealRecoveryPhraseAction}
+              </ActionPanel.Section>
+            ) : null}
           </ActionPanel>
         ) : undefined
       }
