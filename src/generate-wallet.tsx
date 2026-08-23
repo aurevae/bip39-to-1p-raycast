@@ -50,6 +50,7 @@ export default function Command() {
           title="Copy Recovery Phrase"
         />
       )}
+      revealRecoveryPhraseAsPrimary
     />
   );
 }
