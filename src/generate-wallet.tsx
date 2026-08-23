@@ -1,6 +1,5 @@
 import {
   Action,
-  ActionPanel,
   Alert,
   Clipboard,
   confirmAlert,
@@ -43,17 +42,14 @@ export default function Command() {
   return (
     <GeneratedWalletDetail
       onRecoveryPhraseAction={(result) => (
-        <ActionPanel.Submenu icon={Icon.Lock} title="Recovery Phrase">
-          <Action
-            icon={Icon.Clipboard}
-            onAction={() => copyRecoveryPhrase(result.mnemonic)}
-            shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
-            style={Action.Style.Destructive}
-            title="Copy Recovery Phrase"
-          />
-        </ActionPanel.Submenu>
+        <Action
+          icon={Icon.Clipboard}
+          onAction={() => copyRecoveryPhrase(result.mnemonic)}
+          shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
+          style={Action.Style.Destructive}
+          title="Copy Recovery Phrase"
+        />
       )}
-      revealRecoveryPhraseAsPrimary
     />
   );
 }
