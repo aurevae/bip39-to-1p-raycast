@@ -8,6 +8,12 @@
   "categories": [
     "Security"
   ],
+  "keywords": [
+    "bip39",
+    "mnemonic",
+    "seed phrase",
+    "1password"
+  ],
   "license": "MIT",
   "type": "module",
   "platforms": [
@@ -18,12 +24,24 @@
       "name": "generate-wallet",
       "title": "Generate Wallet",
       "description": "Generate a BIP39 recovery phrase locally and display its EVM, Bitcoin, and Solana addresses",
+      "keywords": [
+        "bip39",
+        "mnemonic",
+        "seed phrase",
+        "1password"
+      ],
       "mode": "view"
     },
     {
       "name": "generate-wallet-to-1password",
       "title": "Generate Wallet to 1Password",
       "description": "Generate a wallet and save its recovery phrase and public addresses to 1Password",
+      "keywords": [
+        "bip39",
+        "mnemonic",
+        "seed phrase",
+        "1password"
+      ],
       "mode": "view"
     }
   ],
