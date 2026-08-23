@@ -32,18 +32,19 @@ never the default action and always requires confirmation. An approved copy
 uses concealed clipboard mode, so it is excluded from Raycast's clipboard
 history (third-party clipboard managers may still record it unless they honor
 the concealed-pasteboard convention). The recovery phrase length is controlled
-by extension preferences. This command never invokes the 1Password CLI.
+by extension preferences. In the Action Panel, copying is the first item inside
+the **Recovery Phrase** submenu. This command never invokes the 1Password CLI.
 
 Shortcuts:
 
-| Action                                       | Shortcut                                              |
-| -------------------------------------------- | ----------------------------------------------------- |
-| Reveal / hide phrase                         | <kbd>Enter</kbd> or <kbd>Command</kbd> + <kbd>S</kbd> |
-| Copy recovery phrase (confirmation required) | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd>  |
-| Copy ETH/EVM address                         | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd>  |
-| Copy BTC address                             | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>  |
-| Copy SOL address                             | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd>  |
-| Generate new wallet                          | <kbd>Command</kbd> + <kbd>R</kbd>                     |
+| Action                                                                | Shortcut                                              |
+| --------------------------------------------------------------------- | ----------------------------------------------------- |
+| Reveal / hide phrase                                                  | <kbd>Enter</kbd> or <kbd>Command</kbd> + <kbd>S</kbd> |
+| Copy recovery phrase (Recovery Phrase submenu; confirmation required) | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd>  |
+| Copy ETH/EVM address                                                  | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd>  |
+| Copy BTC address                                                      | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>  |
+| Copy SOL address                                                      | <kbd>Command</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd>  |
+| Generate new wallet                                                   | <kbd>Command</kbd> + <kbd>R</kbd>                     |
 
 Because this command displays the recovery phrase on screen and allows copying
 it to the clipboard, use it only in a private environment and store the phrase
