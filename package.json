@@ -3,7 +3,7 @@
   "name": "bip39-wallet-generator-for-1password",
   "title": "BIP39 Wallet Generator for 1Password",
   "description": "Generate a BIP39 wallet locally and save it directly to 1Password",
-  "icon": "extension-icon-mnemonic-v2.png",
+  "icon": "extension-icon-mnemonic-v3.png",
   "author": "Silencem",
   "categories": [
     "Security"
